@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .wrap { max-width: 900px; margin:0 auto; display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; }
+  @media (max-width: 900px){ .wrap { grid-template-columns: 1fr; } }
+  .panel { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; }
+  .title { font-size:1.2rem; font-weight:900; }
+  .badge { padding:2px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; }
+  .meta { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; color:#6b7280; font-size:.9rem; }
+  input, textarea { width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; }
+  .link { text-decoration:none; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .st { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:8px 10px; border:1px solid #e5e7eb; border-radius:12px; margin-top:8px; }
+</style>
+
+<div class="wrap">
+
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;">
+      <div class="title">{{ task.title|e }}</div>
+      <div class="row">
+        <a class="link" href="{{ url_for('task_edit', task_id=task.id) }}">編集</a>
+
+        <form method="POST" action="{{ url_for('task_delete', task_id=task.id) }}" onsubmit="return confirm('削除しますか？');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">削除</button>
+        </form>
+
+        <a class="link" href="{{ url_for('tasks') }}">一覧へ</a>
+      </div>
+    </div>
+
+    <div class="meta">
+      <span class="badge">進捗: {{ task.status|e }}</span>
+      <span class="badge">優先度:
+        {% if task.priority==3 %}高{% elif task.priority==2 %}中{% else %}低{% endif %}
+      </span>
+      <span class="badge">期限: {% if task.due_at %}{{ task.due_at|dt("%Y-%m-%d %H:%M") }}{% else %}なし{% endif %}</span>
+
+    </div>
+
+    {% if tags and tags|length > 0 %}
+      <div class="meta">
+        <span>タグ:</span>
+        {% for n in tags %}
+          <span class="badge">{{ n|e }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if task.description %}
+      <div style="margin-top:10px; color:#374151;">{{ task.description|e }}</div>
+    {% endif %}
+
+    <hr style="border:none; border-top:1px solid #e5e7eb; margin:12px 0;">
+
+    <div style="font-weight:800;">メモ</div>
+    <form method="POST" action="{{ url_for('memo_update', task_id=task.id) }}" style="margin-top:8px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <textarea name="content" rows="6">{% if memo %}{{ memo.content|e }}{% endif %}</textarea>
+      <div class="row" style="margin-top:8px; justify-content:flex-end;">
+        <button type="submit">保存</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div style="font-weight:900;">サブタスク</div>
+
+    <form method="POST" action="{{ url_for('subtask_add', task_id=task.id) }}" style="margin-top:10px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="row">
+        <input name="title" placeholder="サブタスク名">
+        <button type="submit">追加</button>
+      </div>
+    </form>
+
+    <div style="margin-top:10px;">
+      {% if subtasks|length == 0 %}
+        <div style="color:#6b7280; font-size:.9rem;">サブタスクはまだありません。</div>
+      {% endif %}
+
+      {% for st in subtasks %}
+        <div class="st">
+          <div>
+            {% if st.is_done == 1 %}
+              <span style="text-decoration:line-through; color:#6b7280;">{{ st.title|e }}</span>
+            {% else %}
+              <span>{{ st.title|e }}</span>
+            {% endif %}
+          </div>
+          <div class="row">
+            <form method="POST" action="{{ url_for('subtask_toggle', subtask_id=st.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">{% if st.is_done==1 %}戻す{% else %}完了{% endif %}</button>
+            </form>
+            <form method="POST" action="{{ url_for('subtask_delete', subtask_id=st.id) }}" onsubmit="return confirm('削除しますか？');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">削除</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

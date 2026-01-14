@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .panel { max-width: 980px; margin:0 auto; background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; }
+  .head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; margin-top:12px; }
+  .dow { text-align:center; font-size:.85rem; color:#6b7280; }
+
+  .cell { background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:8px; min-height:70px; display:block; }
+
+  .today { outline:2px solid rgba(59,130,246,.35); }
+  .day { font-weight:900; display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .holiday { font-size:.72rem; font-weight:700; color:#ef4444; line-height:1.1; text-align:right; }
+  .is-holiday { border-color:#fecaca; background:#fff1f2; }
+  .item { margin-top:6px; font-size:.85rem; border:1px solid #e5e7eb; border-radius:10px; background:#fff; padding:4px 6px; }
+
+  .link { text-decoration:none; color:inherit; }
+</style>
+
+<div class="panel">
+  <div class="head">
+    <a class="link" href="{{ url_for('calendar_view', y=prev_y, m=prev_m) }}">◀</a>
+    <div style="font-weight:900;">{{ year }}年 {{ month }}月</div>
+    <a class="link" href="{{ url_for('calendar_view', y=next_y, m=next_m) }}">▶</a>
+  </div>
+
+  <div class="grid">
+    {% for d in ["日","月","火","水","木","金","土"] %}
+      <div class="dow">{{ d }}</div>
+    {% endfor %}
+
+    {% for week in weeks %}
+      {% for day in week %}
+        {% if day == 0 %}
+          <div class="cell" style="background:#fff; border-style:dashed;"></div>
+        {% else %}
+          {% set dstr = "%04d-%02d-%02d"|format(year, month, day) %}
+          {% set hname = (holidays.get(dstr) if holidays is defined else None) %}
+
+          {# ★ここ：セル全体をリンク化 → 押すと予定追加へ #}
+          <a class="cell link
+                    {% if dstr==today_str %}today{% endif %}
+                    {% if hname %}is-holiday{% endif %}"
+             href="{{ url_for('task_new', date=dstr) }}">
+
+            <div class="day">
+              <span>{{ day }}</span>
+              {% if hname %}
+                <span class="holiday">{{ hname|e }}</span>
+              {% endif %}
+            </div>
+
+            {% if tasks_by_date.get(dstr) %}
+              {% for t in tasks_by_date.get(dstr) %}
+                <div class="item">
+                  {# ★ここ：タイトル押下は詳細へ（セル遷移を止める） #}
+                  <a class="link"
+                     href="{{ url_for('task_detail', task_id=t.id) }}"
+                     onclick="event.stopPropagation();">
+                    {{ t.title|e }}
+                  </a>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:10px;">
+    <a class="link" href="{{ url_for('tasks') }}">一覧へ戻る</a>
+  </div>
+</div>
+
+{% endblock %}

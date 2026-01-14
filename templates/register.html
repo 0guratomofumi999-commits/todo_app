@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>新規登録</h2>
+
+  {% if error %}
+    <div class="err" style="margin-bottom:10px;">{{ error|e }}</div>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid2">
+      <div>
+        <label>メールアドレス（ログインID）</label>
+        <input name="email" type="email" autocomplete="username" required>
+      </div>
+      <div>
+        <label>名前（表示名）</label>
+        <input name="name" autocomplete="name" required>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label>パスワード</label>
+      <input name="password" type="password" autocomplete="new-password" required>
+      <div class="muted" style="margin-top:6px;">※8文字以上推奨</div>
+    </div>
+
+    <div style="margin-top:10px;" class="row">
+      <button class="btn" type="submit">登録</button>
+      <a class="link" href="{{ url_for('login') }}">ログインへ</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

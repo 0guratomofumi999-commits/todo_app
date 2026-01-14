@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .panel { max-width: 780px; margin: 0 auto; background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; }
+  input, textarea, select { width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; }
+  label { font-size:.9rem; color:#374151; font-weight:700; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  @media (max-width: 800px){ .row { grid-template-columns: 1fr; } }
+  .btns { display:flex; gap:10px; align-items:center; margin-top:12px; }
+  .link { text-decoration:none; }
+  .err { color:#b91c1c; background:#fff1f2; border:1px solid #fecdd3; padding:8px 10px; border-radius:10px; }
+</style>
+
+<div class="panel">
+  <div style="font-size:1.1rem; font-weight:800;">
+    {% if mode == "new" %}タスク作成{% else %}タスク編集{% endif %}
+  </div>
+
+  {% if error %}
+    <div class="err" style="margin-top:10px;">{{ error|e }}</div>
+  {% endif %}
+
+  <form method="POST" style="margin-top:12px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div>
+      <label>タイトル</label>
+      <input name="title" required value="{% if task %}{{ task.title|e }}{% endif %}">
+    </div>
+
+    <div style="margin-top:10px;">
+      <label>説明</label>
+      <textarea name="description" rows="4">{% if task and task.description %}{{ task.description|e }}{% endif %}</textarea>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>進捗</label>
+        <select name="status">
+          {% set s = task.status if task else "未着手" %}
+          <option value="未着手" {% if s=="未着手" %}selected{% endif %}>未着手</option>
+          <option value="作業中" {% if s=="作業中" %}selected{% endif %}>作業中</option>
+          <option value="完了"   {% if s=="完了" %}selected{% endif %}>完了</option>
+          <option value="イベント" {% if s=="イベント" %}selected{% endif %}>イベント</option>
+        </select>
+      </div>
+
+      <div>
+        <label>優先度</label>
+        {% set p = task.priority if task else 2 %}
+        <select name="priority">
+          <option value="3" {% if p==3 %}selected{% endif %}>高</option>
+          <option value="2" {% if p==2 %}selected{% endif %}>中</option>
+          <option value="1" {% if p==1 %}selected{% endif %}>低</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>期限（datetime-local）</label>
+        <input type="datetime-local" name="due_at" value="{{ default_due|e }}">
+      </div>
+
+      <div>
+        <label>タグ（カンマ区切り）</label>
+        <input name="tags" value="{{ tags_csv|e }}">
+      </div>
+    </div>
+
+    <div class="btns">
+      <button type="submit">{% if mode == "new" %}作成{% else %}更新{% endif %}</button>
+      <a class="link" href="{{ url_for('tasks') }}">戻る</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

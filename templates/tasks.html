@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .layout { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px){ .layout { grid-template-columns: 1fr; } }
+
+  .panel { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; }
+
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .toolbar input, .toolbar select { padding:8px 10px; border:1px solid #e5e7eb; border-radius:10px; }
+
+  .task-row { border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; margin:10px 0; }
+  .task-row.unfinished { box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
+  .task-title { font-weight:700; }
+  .meta { font-size:.85rem; color:#6b7280; display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .badge { padding:2px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; }
+
+  .due-overdue { background:#fff1f2; border-color:#fecdd3; }
+  .due-today   { background:#fffbeb; border-color:#fde68a; }
+  .due-soon    { background:#eff6ff; border-color:#bfdbfe; }
+  .due-later   { background:#f0fdf4; border-color:#bbf7d0; }
+  .due-none    { background:#f9fafb; border-color:#e5e7eb; }
+
+  .cal { user-select:none; }
+  .cal-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+
+  .cal-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-top:12px; }
+  .cal-dow { text-align:center; font-size:.85rem; color:#6b7280; }
+
+  /* カレンダー：セルのサイズを完全固定（中身で伸びない） */
+  .cal-cell{
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px;
+    height: 120px;        /* 好みで調整：110〜150 */
+    overflow: hidden;     /* 中身が増えても伸びない */
+    box-sizing: border-box;
+  }
+  .cal-cell.is-holiday { border-color:#fecaca; background:#fff1f2; }
+  .cal-today { outline:2px solid rgba(59,130,246,.35); }
+
+  /* セル全体をクリック可能に（aを中に入れて全面クリック） */
+  .cal-cell > a.cal-link{
+    display:block;
+    height:100%;
+    color:inherit;
+    text-decoration:none;
+  }
+
+  .cal-dayline { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .cal-day { font-weight:800; font-size:1rem; }
+
+  /* 祝日名も折り返さない（高さが変わらない） */
+  .cal-holiday{
+    font-size:.72rem;
+    font-weight:700;
+    color:#ef4444;
+    line-height:1.1;
+    text-align:right;
+
+    max-width: 70%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* タスク名は1行で…にする（枠を増やさない） */
+  .cal-dot{
+    display:block;
+    margin-top:8px;
+    padding:4px 8px;
+    border-radius:999px;
+    border:1px solid #e5e7eb;
+    background:#fff;
+    font-size:.85rem;
+    color:#374151;
+    line-height: 1.2;
+
+    width:100%;
+    box-sizing:border-box;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .link { text-decoration:none; }
+  .small { font-size:.85rem; color:#6b7280; }
+</style>
+
+<div class="layout">
+
+  <!-- 左：一覧 -->
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div>
+        <div style="font-size:1.1rem; font-weight:800;">タスク一覧</div>
+        {% if reminder_mode %}
+          <div class="small">リマインド表示モード（{{ hours }}時間以内）</div>
+        {% endif %}
+      </div>
+      <div>
+        <a class="link" href="{{ url_for('task_new') }}">＋新規作成</a>
+      </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #e5e7eb; margin:12px 0;">
+
+    <form class="toolbar" method="GET" action="{{ url_for('tasks') }}">
+      <select name="status">
+        <option value="" {% if not status %}selected{% endif %}>すべて</option>
+        <option value="未着手" {% if status=='未着手' %}selected{% endif %}>未着手</option>
+        <option value="作業中" {% if status=='作業中' %}selected{% endif %}>作業中</option>
+        <option value="完了" {% if status=='完了' %}selected{% endif %}>完了</option>
+        <option value="イベント" {% if status=='イベント' %}selected{% endif %}>イベント</option>
+      </select>
+
+      <select name="sort">
+        <option value="due" {% if sort=='due' %}selected{% endif %}>自動（期限/未完了優先）</option>
+        <option value="priority" {% if sort=='priority' %}selected{% endif %}>優先度</option>
+        <option value="created" {% if sort=='created' %}selected{% endif %}>作成日</option>
+      </select>
+
+      <input name="q" value="{{ q }}" placeholder="検索（タイトル/説明）">
+
+      <select name="tag">
+        <option value="" {% if not tag %}selected{% endif %}>タグ（すべて）</option>
+        {% for r in tags %}
+          <option value="{{ r.name }}" {% if tag==r.name %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="date" name="date" value="{{ date }}">
+
+      <button type="submit">適用</button>
+      <a class="link" href="{{ url_for('tasks') }}">クリア</a>
+    </form>
+
+    <div style="margin-top:12px;">
+      {% if tasks|length == 0 %}
+        <div class="small">タスクがありません。</div>
+      {% endif %}
+
+      {% for t in tasks %}
+        <div class="task-row {{ t.due_css }} {% if t.is_unfinished %}unfinished{% endif %}">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+            <div>
+              <div class="task-title">
+                <a class="link" href="{{ url_for('task_detail', task_id=t.id) }}">{{ t.title }}</a>
+              </div>
+
+              <div class="meta">
+                <span class="badge">
+                  期限: {% if t.due_at %}{{ t.due_at|dt("%Y-%m-%d") }}{% else %}なし{% endif %}（{{ t.due_label }}）
+                </span>
+
+                <span class="badge">
+                  優先度:
+                  {% if t.priority == 3 %}高{% elif t.priority == 2 %}中{% else %}低{% endif %}
+                </span>
+
+                <span class="badge">進捗: {{ t.status }}</span>
+              </div>
+            </div>
+
+            <div class="quick-ctl">
+              <!-- 進捗変更 -->
+              <form method="POST" action="{{ url_for('task_quick_status', task_id=t.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="status" onchange="this.form.submit()">
+                  <option value="未着手" {% if t.status=='未着手' %}selected{% endif %}>未着手</option>
+                  <option value="作業中" {% if t.status=='作業中' %}selected{% endif %}>作業中</option>
+                  <option value="完了" {% if t.status=='完了' %}selected{% endif %}>完了</option>
+                  <option value="イベント" {% if t.status=='イベント' %}selected{% endif %}>イベント</option>
+                </select>
+              </form>
+
+              <!-- 優先度変更 -->
+              <form method="POST" action="{{ url_for('task_quick_priority', task_id=t.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="priority" onchange="this.form.submit()">
+                  <option value="3" {% if t.priority==3 %}selected{% endif %}>高</option>
+                  <option value="2" {% if t.priority==2 %}selected{% endif %}>中</option>
+                  <option value="1" {% if t.priority==1 %}selected{% endif %}>低</option>
+                </select>
+              </form>
+            </div>
+          </div>
+
+          {% if t.description %}
+            <div class="small" style="margin-top:8px;">
+              {{ t.description }}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 右：カレンダー -->
+  <div class="panel cal">
+    <div class="cal-head">
+      <a class="link" href="{{ url_for('tasks', y=cal_prev_y, m=cal_prev_m, status=status, q=q, tag=tag, sort=sort, date=date) }}">◀</a>
+      <div style="font-weight:800;">{{ cal_year }}年 {{ cal_month }}月</div>
+      <a class="link" href="{{ url_for('tasks', y=cal_next_y, m=cal_next_m, status=status, q=q, tag=tag, sort=sort, date=date) }}">▶</a>
+    </div>
+
+    <div class="cal-grid" style="margin-top:10px;">
+      {% for d in ["日","月","火","水","木","金","土"] %}
+        <div class="cal-dow">{{ d }}</div>
+      {% endfor %}
+
+      {% for week in cal_weeks %}
+        {% for day in week %}
+          {% if day == 0 %}
+            <div class="cal-cell" style="background:#fff; border-style:dashed;"></div>
+          {% else %}
+            {% set dstr = "%04d-%02d-%02d"|format(cal_year, cal_month, day) %}
+            {% set hname = (cal_holidays.get(dstr) if cal_holidays is defined else None) %}
+            {% set titles = cal_titles_by_date.get(dstr) %}
+
+            <div class="cal-cell {% if dstr == cal_today %}cal-today{% endif %} {% if hname %}is-holiday{% endif %}">
+              <a class="cal-link" href="{{ url_for('tasks', date=dstr, y=cal_year, m=cal_month, status=status, q=q, tag=tag, sort=sort) }}">
+                <div class="cal-dayline">
+                  <div class="cal-day">{{ day }}</div>
+                  {% if hname %}
+                    <div class="cal-holiday">{{ hname }}</div>
+                  {% endif %}
+                </div>
+
+                {% if titles %}
+                  {% for title in titles[:2] %}
+                    <div class="cal-dot">{{ title }}</div>
+                  {% endfor %}
+                  {% if titles|length > 2 %}
+                    <div class="cal-dot">他{{ titles|length - 2 }}件</div>
+                  {% endif %}
+                {% endif %}
+              </a>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+    <div class="small" style="margin-top:10px;">
+      クリックでその日の期限タスクに絞り込み
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

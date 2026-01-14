@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or "ToDoリスト" }}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; }
+    header { background: #111827; color: white; padding: 14px 18px; }
+    header a { color: white; text-decoration: none; }
+    .wrap { max-width: 1400px; margin: 16px auto; padding: 0 12px; }
+    .card { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.06); margin-bottom: 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px; box-sizing: border-box; }
+    button { padding: 10px 12px; border: 0; border-radius: 10px; cursor: pointer; }
+    .btn { background: #111827; color: white; }
+    .btn2 { background: #e5e7eb; }
+    .pill { display:inline-block; padding: 3px 10px; background:#eef2ff; border-radius: 999px; margin-right:6px; }
+    .muted { color: #6b7280; font-size: 0.92rem; }
+    .danger { background:#ef4444; color:white; }
+    .link { color:#2563eb; text-decoration:none; }
+    .task { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .task h3 { margin:0; font-size: 1.05rem; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 720px){ .grid2{ grid-template-columns:1fr; } }
+
+    /* 一覧カード右上のクイック変更(select)だけは幅固定にする */
+    .quick-ctl select{
+      width: auto !important;
+      min-width: 92px;
+      padding: 8px 10px;
+    }
+
+    /* 右上の2つを横並びで崩れにくく */
+    .quick-ctl{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .quick-ctl form{ margin:0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;">
+      <div><a href="{{ url_for('tasks') }}">ToDoリスト</a></div>
+
+      <div>
+        {% if session.get("user_id") %}
+          <span class="muted" style="color:#d1d5db;">{{ session.get("name")|e }}</span>
+
+        {% if session.get("role") == "admin" %}
+          &nbsp;|&nbsp;
+          <a href="{{ url_for('admin_users') }}">管理者</a>
+        {% endif %}
+
+          &nbsp;|&nbsp;
+          <a href="{{ url_for('logout') }}">ログアウト</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    {% if error %}
+      <div class="card" style="border:1px solid #fecaca; background:#fff1f2;">
+        <b>エラー:</b> {{ error|e }}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>ログイン</h2>
+
+  {% if error %}
+    <div class="err" style="margin-bottom:10px;">{{ error|e }}</div>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid2">
+      <div>
+        <label>メールアドレス</label>
+        <input name="email" type="email" autocomplete="username" required>
+      </div>
+      <div>
+        <label>パスワード</label>
+        <input name="password" type="password" autocomplete="current-password" required>
+      </div>
+    </div>
+    <div style="margin-top:10px;" class="row">
+      <button class="btn" type="submit">ログイン</button>
+      <a class="link" href="{{ url_for('register') }}">新規登録へ</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

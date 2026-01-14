@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h2>管理者：ユーザー一覧</h2>
+  <p style="color:#6b7280; margin-top:6px;">
+    登録ユーザーの一覧です（管理者のみ閲覧可）
+  </p>
+
+  <div style="overflow:auto; margin-top:10px;">
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="text-align:left; background:#f9fafb;">
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">ID</th>
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">名前</th>
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">メール</th>
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">権限</th>
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">作成日</th>
+          <th style="padding:10px; border-bottom:1px solid #e5e7eb;">操作</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb;">{{ u.id }}</td>
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb;">{{ u.name|e }}</td>
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb;">{{ u.email|e }}</td>
+
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb;">
+            {% if u.role == "admin" %}
+              <span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:700;">admin</span>
+            {% else %}
+              <span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#e5e7eb; color:#111827; font-weight:700;">user</span>
+            {% endif %}
+          </td>
+
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb;">
+            {{ u.created_at|dt("%Y-%m-%d %H:%M") }}
+          </td>
+
+          <!-- 操作 -->
+          <td style="padding:10px; border-bottom:1px solid #e5e7eb; white-space:nowrap;">
+            {% if u.role == "user" %}
+
+              <!-- 昇格 -->
+              <form method="post"
+                    action="{{ url_for('admin_make_admin', user_id=u.id) }}"
+                    style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn2" type="submit">管理者にする</button>
+              </form>
+
+              <!-- 削除 -->
+              <form method="post"
+                    action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                    style="display:inline; margin-left:6px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="danger" type="submit"
+                        onclick="return confirm('このユーザーを削除します。関連するタスク・サブタスク・メモ・タグも削除されます。よろしいですか？')">
+                  削除
+                </button>
+              </form>
+
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:12px;">
+    <a class="link" href="{{ url_for('tasks') }}">← ToDoへ戻る</a>
+  </div>
+</div>
+
+{% endblock %}
